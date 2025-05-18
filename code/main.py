@@ -176,7 +176,7 @@ Your task is to answer to the user or make the minimal changes to non-tests file
 
 Follow these steps:
 1. As a first step, it might be a good idea to explore the repo to familiarize yourself with its structure.
-2. If required, edit the sourcecode of the repo to address the user reuest.
+2. If required, edit the source code of the repo to address the user request.
 3. If the code changed, try to build the code and fix build errors if there are any!
 
 Your thinking should be thorough and so it's fine if it's very long.
