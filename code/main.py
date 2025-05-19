@@ -154,7 +154,11 @@ def bash(command: str) -> str:
     command (str): The bash command to run.
     """
     print(f"\n\U0001F5A5\033[32m  > {command}\033[0m")
-    return subprocess.run(command, shell=True, capture_output=True, text=True, check=True).stdout
+    try:
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, check=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        return f"Command failed with exit code {e.returncode}.\nStdout: {e.stdout}\nStderr: {e.stderr}"
 
 async def main():
     if len(sys.argv) != 2 or not os.path.exists(sys.argv[1]):
@@ -163,12 +167,18 @@ async def main():
     global location # pylint: disable=global-statement
     location = os.path.abspath(sys.argv[1])
     if os.getenv("ANTHROPIC_API_KEY"):
+        # Use Anthropic API key with OpenAI client but specify it's for Anthropic API
         client = openai.AsyncOpenAI(api_key=os.getenv("ANTHROPIC_API_KEY"), base_url="https://api.anthropic.com/v1/")
         model = agents.OpenAIChatCompletionsModel(model="claude-3-7-sonnet-latest", openai_client=client)
         tools = [str_replace_editor, bash]
-    else:
+    elif os.getenv("OPENAI_API_KEY"):
+        # If OpenAI API key is set, use it directly
         model = "gpt-4.1"
         tools = [str_replace_editor, bash, agents.WebSearchTool()]
+    else:
+        # Ensure at least one API key is provided
+        print("Error: Either ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable must be set")
+        sys.exit(1)
     instructions = f"""
 The code repository is in this directory: <location>{location}</location>
 
