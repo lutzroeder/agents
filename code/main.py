@@ -197,13 +197,17 @@ Your thinking should be thorough and so it's fine if it's very long.
         user_request = input("\U0001F464 User: ")
         print("\U0001F916 ", end="", flush=True)
         messages.append({"role": "user", "content": user_request})
-        stream = agents.Runner.run_streamed(agent, messages, max_turns=100)
-        response = ""
-        async for event in stream.stream_events():
-            if event.type == 'raw_response_event' and event.data.type == "response.output_text.delta":
-                response += event.data.delta
-                print(event.data.delta, end="", flush=True)
-        messages.append({"role": "assistant", "content": response})
+        try:
+            stream = agents.Runner.run_streamed(agent, messages, max_turns=100)
+            response = ""
+            async for event in stream.stream_events():
+                if event.type == 'raw_response_event' and event.data.type == "response.output_text.delta":
+                    response += event.data.delta
+                    print(event.data.delta, end="", flush=True)
+            messages.append({"role": "assistant", "content": response})
+        except Exception as e:
+            print(f"\nError processing request: {str(e)}")
+            continue
         print("")
 
 asyncio.run(main())

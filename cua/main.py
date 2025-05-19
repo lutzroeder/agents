@@ -10,8 +10,13 @@ import pyautogui
 class LocalComputer(agents.AsyncComputer):
 
     def __init__(self):
-        screenshot = pyautogui.screenshot()
-        self.size = screenshot.size
+        try:
+            screenshot = pyautogui.screenshot()
+            self.size = screenshot.size
+        except Exception as e:
+            print(f"Warning: Could not take screenshot: {str(e)}")
+            # Use fallback screen size (common resolution)
+            self.size = (1920, 1080)
 
     @property
     def environment(self) -> agents.Environment:
@@ -80,18 +85,22 @@ async def main():
     )
     while True:
         prompt = input("\U0001F464 User: ")
-        stream = agents.Runner.run_streamed(agent, prompt, max_turns=100)
-        async for event in stream.stream_events():
-            if event.type == 'run_item_stream_event':
-                if event.name == 'tool_called':
-                    action_args = vars(event.item.raw_item.action) | {}
-                    action = action_args.pop("type")
-                    print(f"   {action} {action_args}")
-                elif event.name == "reasoning_item_created":
-                    summary = "".join([_.text for _ in event.item.raw_item.summary])
-                    print(f"\n\U0001F916 Action: {summary}")
-            if event.type == 'raw_response_event':
-                if event.data.type == "response.output_text.done":
-                    print(f"\n\U0001F916 Agent: {event.data.text}\n")
+        try:
+            stream = agents.Runner.run_streamed(agent, prompt, max_turns=100)
+            async for event in stream.stream_events():
+                if event.type == 'run_item_stream_event':
+                    if event.name == 'tool_called':
+                        action_args = vars(event.item.raw_item.action) | {}
+                        action = action_args.pop("type")
+                        print(f"   {action} {action_args}")
+                    elif event.name == "reasoning_item_created":
+                        summary = "".join([_.text for _ in event.item.raw_item.summary])
+                        print(f"\n\U0001F916 Action: {summary}")
+                if event.type == 'raw_response_event':
+                    if event.data.type == "response.output_text.done":
+                        print(f"\n\U0001F916 Agent: {event.data.text}\n")
+        except Exception as e:
+            print(f"\n\U0001F916 Error: {str(e)}\n")
+            continue
 
 asyncio.run(main())
