@@ -1,5 +1,4 @@
 import asyncio
-import collections
 import os
 import subprocess
 import sys
@@ -7,22 +6,6 @@ import sys
 import agents
 import openai
 
-location: str = "" # the project root location
-file_history: dict[str, list[str]] = collections.defaultdict(list)
-
-def read_file(path: str):
-    with open(path, encoding="utf-8") as f:
-        return f.read()
-
-def write_file(path: str, file: str):
-    with open(path, "w", encoding="utf-8") as f:
-        return f.write(file)
-
-def make_output(content: str, file: str, init_line: int = 1, expand_tabs: bool = True):
-    content = content if len(content) <= 16000 else content[:16000] + "<response clipped><NOTE>To save on context only part of this file has been shown to you. You should retry this tool after you have searched inside the file with `grep -n` in order to find the line numbers of what you are looking for.</NOTE>"
-    content = content.expandtabs() if expand_tabs else content
-    content = "\n".join([f"{i + init_line:6}\t{line}" for i, line in enumerate(content.split("\n"))])
-    return f"Here's the result of running `cat -n` on {file}:\n" + content + "\n"
 
 @agents.tool.function_tool
 def str_replace_editor(command: str, path: str, file_text: str | None = None, view_range: list[int] | None = None, old_str: str | None = None, new_str: str | None = None, insert_line: int | None = None):
@@ -32,7 +15,6 @@ def str_replace_editor(command: str, path: str, file_text: str | None = None, vi
     * If `path` is a file, `view` displays the result of applying `cat -n`. If `path` is a directory, `view` lists non-hidden files and directories up to 2 levels deep
     * The `create` command cannot be used if the specified `path` already exists as a file
     * If a `command` generates a long output, it will be truncated and marked with `<response clipped>`
-    * The `undo_edit` command will revert the last edit made to the file at `path`
 
     Notes for using the `str_replace` command:
     * The `old_str` parameter should match EXACTLY one or more consecutive lines from the original file. Be mindful of whitespaces!
@@ -40,7 +22,7 @@ def str_replace_editor(command: str, path: str, file_text: str | None = None, vi
     * The `new_str` parameter should contain the edited lines that should replace the `old_str`
 
     Args:
-    command (str): The commands to run. Allowed options are: `view`, `create`, `str_replace`, `insert`, `undo_edit`.
+    command (str): The commands to run. Allowed options are: `view`, `create`, `str_replace`, `insert`.
     file_text (str): Required parameter of `create` command, with the content of the file to be created.
     insert_line (int): Required parameter of `insert` command. The `new_str` will be inserted AFTER the line `insert_line` of `path`.
     new_str (str): Optional parameter of `str_replace` command containing the new string (if not given, no string will be added). Required parameter of `insert` command containing the string to insert.
@@ -48,6 +30,19 @@ def str_replace_editor(command: str, path: str, file_text: str | None = None, vi
     path (str): Absolute path to file or directory, e.g. `/repo/file.py` or `/repo`.
     view_range (list of int): Optional parameter of `view` command when `path` points to a file. If none is given, the full file is shown. If provided, the file will be shown in the indicated line number range, e.g. [11, 12] will show lines 11 and 12. Indexing at 1 to start. Setting `[start_line, -1]` shows all lines from `start_line` to the end of the file.
     """
+    def read_file(path: str):
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+    def write_file(path: str, file: str):
+        with open(path, "w", encoding="utf-8") as f:
+            return f.write(file)
+    def make_output(content: str, file: str, init_line: int = 1, expand_tabs: bool = True):
+        content = content if len(content) <= 16000 else content[:16000] + "<response clipped><NOTE>To save on context only part of this file has been shown to you. You should retry this tool after you have searched inside the file with `grep -n` in order to find the line numbers of what you are looking for.</NOTE>"
+        content = content.expandtabs() if expand_tabs else content
+        content = "\n".join([f"{i + init_line:6}\t{line}" for i, line in enumerate(content.split("\n"))])
+        return f"Here's the result of running `cat -n` on {file}:\n" + content + "\n"
+
+    location = os.getcwd()
     if not os.path.commonpath([os.path.abspath(location), os.path.abspath(path)]):
         raise ValueError(f"The path '{path}' is not within the directory '{location}'.")
     if not os.path.isabs(path):
@@ -92,13 +87,12 @@ def str_replace_editor(command: str, path: str, file_text: str | None = None, vi
     print(f"\n\u270F\uFE0F\033[32m  > {command} {os.path.relpath(path, location)}\033[0m")
     if command == "create":
         if file_text is None:
-            raise ValueError("Parameter `file_text` is required for command 'create'.")
+            raise ValueError("Parameter `file_text` required for command 'create'.")
         write_file(path, file_text)
-        file_history[path].append(file_text)
         return f"File created successfully: '{path}'."
     if command == "str_replace":
         if old_str is None:
-            raise ValueError("Parameter `old_str` is required for command 'str_replace'.")
+            raise ValueError("Parameter `old_str` required for command 'str_replace'.")
         content = read_file(path).expandtabs()
         old_str = old_str.expandtabs()
         new_str = new_str.expandtabs() if new_str else ""
@@ -109,7 +103,6 @@ def str_replace_editor(command: str, path: str, file_text: str | None = None, vi
             raise ValueError(f"No replacement was performed. Multiple occurrences of old_str `{old_str}` in lines {[i + 1 for i, line in enumerate(content.splitlines()) if old_str in line]}. Please ensure it is unique.")
         new_content = content.replace(old_str, new_str)
         write_file(path, new_content)
-        file_history[path].append(content)
         replacement = content.split(old_str)[0].count("\n")
         start = max(0, replacement - 4)
         end = replacement + 4 + new_str.count("\n")
@@ -127,15 +120,8 @@ def str_replace_editor(command: str, path: str, file_text: str | None = None, vi
         new_lines = new_str.split("\n")
         snippet = "\n".join(lines[max(0, insert_line - 4) : insert_line] + new_lines + lines[insert_line : insert_line + 4])
         write_file(path, "\n".join(lines[:insert_line] + new_lines + lines[insert_line:]))
-        file_history[path].append(content)
         output = make_output(snippet, "a snippet of the edited file", max(1, insert_line - 4 + 1))
         return f"The file {path} has been edited. {output}Review the changes and make sure they are as expected (correct indentation, no duplicate lines, etc). Edit the file again if necessary."
-    if command == "undo_edit":
-        if not file_history[path]:
-            raise ValueError(f"No edit history found for {path}.")
-        old_text = file_history[path].pop()
-        write_file(path, old_text)
-        return f"Last edit to {path} undone successfully. {make_output(old_text, str(path))}"
     raise ValueError(f'Unrecognized command {command}.')
 
 @agents.tool.function_tool
@@ -157,21 +143,26 @@ def bash(command: str) -> str:
     return subprocess.run(command, shell=True, capture_output=True, text=True, check=True).stdout
 
 async def main():
-    if len(sys.argv) != 2 or not os.path.exists(sys.argv[1]):
-        print("Usage: python main.py <directory>")
+    argv = list(sys.argv[1:])
+    model = argv.pop(0) if len(argv) > 0 and argv[0] in ('claude', 'gpt', 'o3', 'o3-pro', 'gemini') else 'claude'
+    if len(argv) < 1 or not os.path.exists(argv[0]):
+        print("Usage: python main.py [claude|gpt|o3|o3-pro|gemini] <directory> [prompt]")
         sys.exit(1)
-    global location # pylint: disable=global-statement
-    location = os.path.abspath(sys.argv[1])
-    if os.getenv("ANTHROPIC_API_KEY"):
-        client = openai.AsyncOpenAI(api_key=os.getenv("ANTHROPIC_API_KEY"), base_url="https://api.anthropic.com/v1/")
-        model = agents.OpenAIChatCompletionsModel(model="claude-3-7-sonnet-latest", openai_client=client)
-        tools = [str_replace_editor, bash]
-    else:
+    location = os.path.abspath(argv.pop(0))
+    os.chdir(location)
+    prompt = argv.pop(0) if len(argv) > 0 else None
+    tools = [str_replace_editor, bash]
+    if model == 'gpt':
         model = "gpt-4.1"
-        tools = [str_replace_editor, bash, agents.WebSearchTool()]
+        tools.append(agents.WebSearchTool())
+    elif model == 'gemini':
+        client = openai.AsyncOpenAI(api_key=os.getenv('GEMINI_API_KEY'), base_url='https://generativelanguage.googleapis.com/v1beta/')
+        model = agents.OpenAIChatCompletionsModel("gemini-2.5-pro", client)
+    elif model == 'claude':
+        client = openai.AsyncOpenAI(api_key=os.getenv("ANTHROPIC_API_KEY"), base_url="https://api.anthropic.com/v1/")
+        model = agents.OpenAIChatCompletionsModel("claude-sonnet-4-20250514", client)
     instructions = f"""
 The code repository is in this directory: <location>{location}</location>
-
 Your task is to answer to the user or make the minimal changes to non-tests files in the <location> directory to ensure the user request is satisfied.
 
 Follow these steps:
@@ -181,10 +172,10 @@ Follow these steps:
 
 Your thinking should be thorough and so it's fine if it's very long.
 """
-    agent = agents.Agent("code", model=model, instructions=instructions, tools=tools)
+    agent = agents.Agent("code", instructions=instructions, model=model, tools=tools)
     messages = []
     while True:
-        user_request = input("\U0001F464 User: ")
+        user_request = input("\U0001F464 User: ") if not prompt else prompt
         print("\U0001F916 ", end="", flush=True)
         messages.append({"role": "user", "content": user_request})
         stream = agents.Runner.run_streamed(agent, messages, max_turns=100)
@@ -195,5 +186,7 @@ Your thinking should be thorough and so it's fine if it's very long.
                 print(event.data.delta, end="", flush=True)
         messages.append({"role": "assistant", "content": response})
         print("")
+        if prompt:
+            break
 
 asyncio.run(main())

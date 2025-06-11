@@ -70,8 +70,8 @@ class LocalComputer(agents.AsyncComputer):
 
 async def main():
     agent = agents.Agent(
-        name="computer-use",
-        instructions="You are a helpful agent. DO NOT ask the user for confirmations.",
+        "computer-use",
+        "You are a helpful agent. DO NOT ask the user for confirmations.",
         model="computer-use-preview",
         model_settings=agents.ModelSettings(truncation="auto",
             reasoning={"generate_summary": "concise"}),

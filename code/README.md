@@ -14,14 +14,15 @@ git clone https://github.com/lutzroeder/models
 ```bash
 pip install openai-agents
 ```
-3. Set either the Anthropic **or** OpenAI API key
+3. Set the API key(s) for your model(s)
 ```bash
 set ANTHROPIC_API_KEY=...
 set OPENAI_API_KEY=...
+set GEMINI_API_KEY=...
 ```
 4. Example interaction with the agent:
 ```bash
-python ./agents/code/main.py ./models/gpt2
+python ./agents/code/main.py claude ./models/gpt2
 ```
 ```
 👤 User: Explain this code to me
