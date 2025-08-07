@@ -52,11 +52,12 @@ class Report(pydantic.BaseModel):
 async def main():
     user_prompt = sys.argv[1] if len(sys.argv) > 1 else None
     user_request = input("\U0001F464 User: ") if not user_prompt else user_prompt
+    model_settings = agents.ModelSettings(reasoning={"effort": "medium"})
     with Stage("\U0001F916 Planning"):
         prompt = """You are a research planning assistant.
 Given a query, create a set of web searches to find content to best answer the query.
 Output between 5 and 20 terms to query for."""
-        agent = agents.Agent(name="Plan", instructions=prompt, model="o3", output_type=SearchPlan)
+        agent = agents.Agent(name="Plan", instructions=prompt, model="gpt-5", model_settings=model_settings, output_type=SearchPlan)
         result = await agents.Runner.run(agent, f"Query: {user_request}")
         plan = result.final_output_as(SearchPlan)
     for item in plan.searches:
@@ -85,7 +86,7 @@ You will be provided with the original query, and initial research done by a res
 First create an outline that describes the structure and flow of the report.
 Then, generate the report and return that as your final output.
 The final output should be detailed in markdown format with for 5-10 pages of content, at least 1000 words."""
-        agent = agents.Agent(name="Summary", instructions=prompt, model="o3-mini", output_type=Report)
+        agent = agents.Agent(name="Summary", instructions=prompt, model="gpt-5-mini", model_settings=model_settings, output_type=Report)
         result = await agents.Runner.run(agent, f"Original query: {user_prompt}\nSummarized search results: {search_results}")
         report = result.final_output_as(Report)
     print(f"\n\n{report.summary}\n")

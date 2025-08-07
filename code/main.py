@@ -144,23 +144,24 @@ def bash(command: str) -> str:
 
 async def main():
     argv = list(sys.argv[1:])
-    model = argv.pop(0) if len(argv) > 0 and argv[0] in ('claude', 'gpt', 'o3', 'o3-pro', 'gemini') else 'claude'
+    model = argv.pop(0) if len(argv) > 0 and argv[0] in ('gpt-5', 'claude', 'gemini') else 'gpt-5'
     if len(argv) < 1 or not os.path.exists(argv[0]):
-        print("Usage: python main.py [claude|gpt|o3|o3-pro|gemini] <directory> [prompt]")
+        print("Usage: python main.py [gpt-5|claude|gemini] <directory> [prompt]")
         sys.exit(1)
     location = os.path.abspath(argv.pop(0))
     os.chdir(location)
     prompt = argv.pop(0) if len(argv) > 0 else None
     tools = [str_replace_editor, bash]
-    if model == 'gpt':
-        model = "gpt-4.1"
+    model_settings = agents.ModelSettings()
+    if model == 'gpt-5':
+        model_settings.reasoning = {"effort": "medium"}
         tools.append(agents.WebSearchTool())
+    elif model == 'claude':
+        client = openai.AsyncOpenAI(api_key=os.getenv("ANTHROPIC_API_KEY"), base_url="https://api.anthropic.com/v1/")
+        model = agents.OpenAIChatCompletionsModel("claude-opus-4-1", client)
     elif model == 'gemini':
         client = openai.AsyncOpenAI(api_key=os.getenv('GEMINI_API_KEY'), base_url='https://generativelanguage.googleapis.com/v1beta/')
         model = agents.OpenAIChatCompletionsModel("gemini-2.5-pro", client)
-    elif model == 'claude':
-        client = openai.AsyncOpenAI(api_key=os.getenv("ANTHROPIC_API_KEY"), base_url="https://api.anthropic.com/v1/")
-        model = agents.OpenAIChatCompletionsModel("claude-sonnet-4-20250514", client)
     instructions = f"""
 The code repository is in this directory: <location>{location}</location>
 Your task is to answer to the user or make the minimal changes to non-tests files in the <location> directory to ensure the user request is satisfied.
@@ -172,7 +173,7 @@ Follow these steps:
 
 Your thinking should be thorough and so it's fine if it's very long.
 """
-    agent = agents.Agent("code", instructions=instructions, model=model, tools=tools)
+    agent = agents.Agent("code", instructions=instructions, model=model, model_settings=model_settings, tools=tools)
     messages = []
     while True:
         user_request = input("\U0001F464 User: ") if not prompt else prompt
