@@ -146,7 +146,7 @@ async def main():
     argv = list(sys.argv[1:])
     model = argv.pop(0) if len(argv) > 0 and argv[0] in ('gpt-5', 'claude', 'gemini') else 'gpt-5'
     if len(argv) < 1 or not os.path.exists(argv[0]):
-        print("Usage: python main.py [gpt-5|claude|gemini] <directory> [prompt]")
+        print("Usage: python code.py [gpt-5|claude|gemini] <directory> [prompt]")
         sys.exit(1)
     location = os.path.abspath(argv.pop(0))
     os.chdir(location)
