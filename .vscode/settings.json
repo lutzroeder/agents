@@ -1,0 +1,6 @@
+{
+  "ruff.lint.ignore": ["E501"],
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportShadowedImports": "none"
+  }
+}
