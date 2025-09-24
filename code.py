@@ -144,16 +144,17 @@ def bash(command: str) -> str:
 
 async def main():
     argv = list(sys.argv[1:])
-    model = argv.pop(0) if len(argv) > 0 and argv[0] in ('gpt-5', 'claude', 'gemini') else 'gpt-5'
+    model = argv.pop(0) if len(argv) > 0 and argv[0] in ('codex', 'claude', 'gemini') else 'codex'
     if len(argv) < 1 or not os.path.exists(argv[0]):
-        print("Usage: python code.py [gpt-5|claude|gemini] <directory> [prompt]")
+        print("Usage: python code.py [codex|claude|gemini] <directory> [prompt]")
         sys.exit(1)
     location = os.path.abspath(argv.pop(0))
     os.chdir(location)
     prompt = argv.pop(0) if len(argv) > 0 else None
     tools = [str_replace_editor, bash]
     model_settings = agents.ModelSettings()
-    if model == 'gpt-5':
+    if model == 'codex':
+        model = 'gpt-5-codex'
         model_settings.reasoning = {"effort": "medium"}
         tools.append(agents.WebSearchTool())
     elif model == 'claude':
