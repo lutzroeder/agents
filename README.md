@@ -1,10 +1,10 @@
 # Tiny Agents
 
-Minimal coding, computer-use, and deep research agents using the OpenAI Agents SDK.
+Minimal coding, computer-use, and research agents using the OpenAI Agents SDK.
 
 * [code.py](code.py) - A minimal coding agent in 200 lines of Python code.
 * [cua.py](cua.py) - A minimal computer-use agent in 100 lines of Python code.
-* [research.py](research.py) - A minimal deep research agent in 100 lines of Python code.
+* [research.py](research.py) - A minimal research agent in 100 lines of Python code.
 
 ## Get started
 
@@ -65,9 +65,9 @@ python cua.py
 👤 User: 
 ```
 
-## Deep Research Agent
+## Research Agent
 
-A minimal deep research agent in 100 lines of Python code.
+A minimal research agent in 100 lines of Python code.
 
 ```bash
 python research.py

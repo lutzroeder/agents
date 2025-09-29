@@ -144,7 +144,7 @@ def bash(command: str) -> str:
 
 async def main():
     argv = list(sys.argv[1:])
-    model = argv.pop(0) if len(argv) > 0 and argv[0] in ('codex', 'claude', 'gemini') else 'codex'
+    model = argv.pop(0) if len(argv) > 0 and argv[0] in ('codex', 'claude', 'gemini') else 'claude'
     if len(argv) < 1 or not os.path.exists(argv[0]):
         print("Usage: python code.py [codex|claude|gemini] <directory> [prompt]")
         sys.exit(1)
@@ -159,7 +159,7 @@ async def main():
         tools.append(agents.WebSearchTool())
     elif model == 'claude':
         client = openai.AsyncOpenAI(api_key=os.getenv("ANTHROPIC_API_KEY"), base_url="https://api.anthropic.com/v1/")
-        model = agents.OpenAIChatCompletionsModel("claude-opus-4-1", client)
+        model = agents.OpenAIChatCompletionsModel("claude-sonnet-4-5", client)
     elif model == 'gemini':
         client = openai.AsyncOpenAI(api_key=os.getenv('GEMINI_API_KEY'), base_url='https://generativelanguage.googleapis.com/v1beta/')
         model = agents.OpenAIChatCompletionsModel("gemini-2.5-pro", client)
