@@ -8,7 +8,7 @@ import agents
 import pydantic
 
 
-class Stage:
+class Progress:
 
     def __init__(self, text):
         self.frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
@@ -52,8 +52,8 @@ class Report(pydantic.BaseModel):
 async def main():
     user_prompt = sys.argv[1] if len(sys.argv) > 1 else None
     user_request = input("\U0001F464 User: ") if not user_prompt else user_prompt
-    model_settings = agents.ModelSettings(reasoning={"effort": "medium"})
-    with Stage("\U0001F916 Planning"):
+    model_settings = agents.ModelSettings(reasoning={"effort": "low"})
+    with Progress("\U0001F916 Planning"):
         prompt = """You are a research planning assistant.
 Given a query, create a set of web searches to find content to best answer the query.
 Output between 5 and 20 terms to query for."""
@@ -62,7 +62,7 @@ Output between 5 and 20 terms to query for."""
         plan = result.final_output_as(SearchPlan)
     for item in plan.searches:
         print(f'\033[90m   {item.query}\033[0m')
-    with Stage("\U0001F50D Searching") as spinner:
+    with Progress("\U0001F50D Searching") as spinner:
         prompt = """You are a research assistant. Search the web based on a given search term and produce a concise summary of the results.
     The summary must be 2-3 paragraphs and less than 300 words. Capture the main points. Write succinctly, no need to have complete sentences or good grammar.
     This will be consumed by an expert synthesizing a report, so its vital to capture the essence and ignore any fluff.
@@ -80,7 +80,7 @@ Output between 5 and 20 terms to query for."""
                 search_results.append(result)
             completed += 1
             spinner.status = f"({completed}/{len(tasks)} completed)"
-    with Stage("\U0001F4DD Summarizing"):
+    with Progress("\U0001F4DD Summarizing"):
         prompt = """You are a senior researcher tasked with writing a cohesive report for a user query.
 You will be provided with the original query, and initial research done by a research assistant.
 First create an outline that describes the structure and flow of the report.
