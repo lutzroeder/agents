@@ -7,6 +7,14 @@ import agents
 import openai
 
 
+def read_file(path: str):
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+def write_file(path: str, file: str):
+    with open(path, "w", encoding="utf-8") as f:
+        return f.write(file)
+
 @agents.tool.function_tool
 def str_replace_editor(command: str, path: str, file_text: str | None = None, view_range: list[int] | None = None, old_str: str | None = None, new_str: str | None = None, insert_line: int | None = None):
     """
@@ -30,12 +38,6 @@ def str_replace_editor(command: str, path: str, file_text: str | None = None, vi
     path (str): Absolute path to file or directory, e.g. `/repo/file.py` or `/repo`.
     view_range (list of int): Optional parameter of `view` command when `path` points to a file. If none is given, the full file is shown. If provided, the file will be shown in the indicated line number range, e.g. [11, 12] will show lines 11 and 12. Indexing at 1 to start. Setting `[start_line, -1]` shows all lines from `start_line` to the end of the file.
     """
-    def read_file(path: str):
-        with open(path, encoding="utf-8") as f:
-            return f.read()
-    def write_file(path: str, file: str):
-        with open(path, "w", encoding="utf-8") as f:
-            return f.write(file)
     def make_output(content: str, file: str, init_line: int = 1, expand_tabs: bool = True):
         content = content if len(content) <= 16000 else content[:16000] + "<response clipped><NOTE>To save on context only part of this file has been shown to you. You should retry this tool after you have searched inside the file with `grep -n` in order to find the line numbers of what you are looking for.</NOTE>"
         content = content.expandtabs() if expand_tabs else content
@@ -142,6 +144,58 @@ def bash(command: str) -> str:
     print(f"\n\U0001F5A5\033[32m  > {command}\033[0m")
     return subprocess.run(command, shell=True, capture_output=True, text=True, check=True).stdout
 
+@agents.tool.function_tool
+def apply_patch(patch_text: str) -> str:
+    print("\n\U0001F4DD\033[32m  > apply_patch\033[0m")
+    def write_lines(path: str, content: list) -> None:
+        if "/" in path:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+        write_file(path, "\n".join(content))
+    lines = patch_text.strip().split("\n")
+    if not lines or not lines[0].startswith("*** Begin Patch"):
+        return "Error: Patch must start with '*** Begin Patch'"
+    i = 1
+    while i < len(lines) and not lines[i].startswith("*** End Patch"):
+        cmd, i = lines[i], i + 1
+        if cmd.startswith("*** Add File: "):
+            path, content = cmd[14:], []
+            while i < len(lines) and not lines[i].startswith("***"):
+                content.append(lines[i][1:] if lines[i].startswith("+") else lines[i])
+                i += 1
+            if os.path.exists(path):
+                raise FileExistsError(f"Cannot add file '{path}': file already exists")
+            write_lines(path, content)
+        elif cmd.startswith("*** Delete File: "):
+            os.remove(cmd[17:])
+        elif cmd.startswith("*** Update File: "):
+            file_lines = read_file(cmd[17:]).split("\n")
+            idx, result = 0, []
+            while i < len(lines) and not lines[i].startswith("***"):
+                patch_line, i = lines[i], i + 1
+                if not patch_line:
+                    continue
+                if patch_line.startswith("@@ "):
+                    found = next((j for j, line in enumerate(file_lines[idx:], idx) if line == patch_line[3:]), idx)
+                    result.extend(file_lines[idx:found])
+                    idx = found
+                elif patch_line[0] in " -":
+                    content = patch_line[1:]
+                    if idx >= len(file_lines) or file_lines[idx] != content:
+                        raise ValueError(f"{'Context' if patch_line[0] == ' ' else 'Deletion'} mismatch at {idx}: expected {repr(content)}, found {repr(file_lines[idx] if idx < len(file_lines) else 'EOF')}")
+                    result.append(file_lines[idx]) if patch_line[0] == " " else None
+                    idx += 1
+                elif patch_line[0] == "+":
+                    result.append(patch_line[1:])
+            result.extend(file_lines[idx:])
+            write_lines(cmd[17:], result)
+    return "Patch applied successfully"
+
+@agents.tool.function_tool
+def shell(command: list[str], workdir: str) -> str:
+    print(f"\n\U0001F5A5\033[32m  > shell {' '.join(command)} (in {workdir})\033[0m")
+    result = subprocess.run(command, cwd=workdir, capture_output=True, text=True, check=False)
+    return result.stdout if result.returncode == 0 else f"Exit code {result.returncode}\n{result.stderr}"
+
 async def main():
     argv = list(sys.argv[1:])
     model = argv.pop(0) if len(argv) > 0 and argv[0] in ('codex', 'claude', 'gemini') else 'claude'
@@ -151,16 +205,17 @@ async def main():
     location = os.path.abspath(argv.pop(0))
     os.chdir(location)
     prompt = argv.pop(0) if len(argv) > 0 else None
-    tools = [str_replace_editor, bash]
-    model_settings = agents.ModelSettings()
+    model_settings = agents.ModelSettings(truncation="auto")
     if model == 'codex':
-        model = 'gpt-5-codex'
+        model = 'gpt-5.1-codex'
         model_settings.reasoning = {"effort": "medium"}
-        tools.append(agents.WebSearchTool())
+        tools = [apply_patch, shell, agents.WebSearchTool()]
     elif model == 'claude':
+        tools = [str_replace_editor, bash]
         client = openai.AsyncOpenAI(api_key=os.getenv("ANTHROPIC_API_KEY"), base_url="https://api.anthropic.com/v1/")
         model = agents.OpenAIChatCompletionsModel("claude-sonnet-4-5", client)
     elif model == 'gemini':
+        tools = [str_replace_editor, bash]
         client = openai.AsyncOpenAI(api_key=os.getenv('GEMINI_API_KEY'), base_url='https://generativelanguage.googleapis.com/v1beta/')
         model = agents.OpenAIChatCompletionsModel("gemini-2.5-pro", client)
     instructions = f"""

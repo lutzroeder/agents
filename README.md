@@ -2,7 +2,7 @@
 
 Minimal coding, computer-use, and research agents using the OpenAI Agents SDK.
 
-* [code.py](code.py) - A minimal coding agent in 200 lines of Python code.
+* [code.py](code.py) - A minimal coding agent in 250 lines of Python code.
 * [cua.py](cua.py) - A minimal computer-use agent in 100 lines of Python code.
 * [research.py](research.py) - A minimal research agent in 100 lines of Python code.
 
@@ -21,7 +21,7 @@ export OPENAI_API_KEY=...
 
 ## Coding Agent
 
-A minimal coding agent inspired by [Raising the bar on SWE-bench](https://www.anthropic.com/engineering/swe-bench-sonnet) in 200 lines of Python code.
+A minimal coding agent inspired by [Raising the bar on SWE-bench](https://www.anthropic.com/engineering/swe-bench-sonnet) in 250 lines of Python code.
 
 ```bash
 python code.py <directory>
