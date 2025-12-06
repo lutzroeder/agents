@@ -207,13 +207,13 @@ async def main():
     prompt = argv.pop(0) if len(argv) > 0 else None
     model_settings = agents.ModelSettings(truncation="auto")
     if model == 'codex':
-        model = 'gpt-5.1-codex'
+        model = 'gpt-5.1-codex-max'
         model_settings.reasoning = {"effort": "medium"}
         tools = [apply_patch, shell, agents.WebSearchTool()]
     elif model == 'claude':
         tools = [str_replace_editor, bash]
         client = openai.AsyncOpenAI(api_key=os.getenv("ANTHROPIC_API_KEY"), base_url="https://api.anthropic.com/v1/")
-        model = agents.OpenAIChatCompletionsModel("claude-sonnet-4-5", client)
+        model = agents.OpenAIChatCompletionsModel("claude-opus-4-5", client)
     elif model == 'gemini':
         tools = [str_replace_editor, bash]
         client = openai.AsyncOpenAI(api_key=os.getenv('GEMINI_API_KEY'), base_url='https://generativelanguage.googleapis.com/v1beta/')
