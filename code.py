@@ -207,7 +207,7 @@ async def main():
     prompt = argv.pop(0) if len(argv) > 0 else None
     model_settings = agents.ModelSettings(truncation="auto")
     if model == 'codex':
-        model = 'gpt-5.1-codex-max'
+        model = 'gpt-5.2-codex'
         model_settings.reasoning = {"effort": "medium"}
         tools = [apply_patch, shell, agents.WebSearchTool()]
     elif model == 'claude':

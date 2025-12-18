@@ -56,8 +56,8 @@ async def main():
     with Progress("\U0001F916 Planning"):
         prompt = """You are a research planning assistant.
 Given a query, create a set of web searches to find content to best answer the query.
-Output between 5 and 20 terms to query for."""
-        agent = agents.Agent(name="Plan", instructions=prompt, model="gpt-5", model_settings=model_settings, output_type=SearchPlan)
+Output between 10 and 20 terms to query for."""
+        agent = agents.Agent(name="Plan", instructions=prompt, model="gpt-5.2", tools=[agents.WebSearchTool()], model_settings=model_settings, output_type=SearchPlan)
         result = await agents.Runner.run(agent, f"Query: {user_request}")
         plan = result.final_output_as(SearchPlan)
     for item in plan.searches:
@@ -67,7 +67,7 @@ Output between 5 and 20 terms to query for."""
     The summary must be 2-3 paragraphs and less than 300 words. Capture the main points. Write succinctly, no need to have complete sentences or good grammar.
     This will be consumed by an expert synthesizing a report, so its vital to capture the essence and ignore any fluff.
     Do not include any additional commentary other than the summary itself."""
-        agent = agents.Agent(name="Search", instructions=prompt, tools=[agents.WebSearchTool()], model_settings=agents.ModelSettings(tool_choice="required"))
+        agent = agents.Agent(name="Search", instructions=prompt, model="gpt-5-mini", tools=[agents.WebSearchTool()], model_settings=agents.ModelSettings(tool_choice="required"))
         async def search_item(item: SearchQuery) -> str:
             result = await agents.Runner.run(agent, f"Search term: {item.query}\nReason for searching: {item.reason}")
             return str(result.final_output)
@@ -86,8 +86,8 @@ You will be provided with the original query, and initial research done by a res
 First create an outline that describes the structure and flow of the report.
 Then, generate the report and return that as your final output.
 The final output should be detailed in markdown format with for 5-10 pages of content, at least 1000 words."""
-        agent = agents.Agent(name="Summary", instructions=prompt, model="gpt-5-mini", model_settings=model_settings, output_type=Report)
-        result = await agents.Runner.run(agent, f"Original query: {user_prompt}\nSummarized search results: {search_results}")
+        agent = agents.Agent(name="Summary", instructions=prompt, model="gpt-5.2", model_settings=model_settings, output_type=Report)
+        result = await agents.Runner.run(agent, f"Original query: {user_request}\nSummarized search results: {search_results}")
         report = result.final_output_as(Report)
     print(f"\n\n{report.summary}\n")
     print(f"{report.report}")
