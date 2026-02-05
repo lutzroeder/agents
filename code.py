@@ -213,7 +213,7 @@ async def main():
     elif model == 'claude':
         tools = [str_replace_editor, bash]
         client = openai.AsyncOpenAI(api_key=os.getenv("ANTHROPIC_API_KEY"), base_url="https://api.anthropic.com/v1/")
-        model = agents.OpenAIChatCompletionsModel("claude-opus-4-5", client)
+        model = agents.OpenAIChatCompletionsModel("claude-opus-4-6", client)
     elif model == 'gemini':
         tools = [str_replace_editor, bash]
         client = openai.AsyncOpenAI(api_key=os.getenv('GEMINI_API_KEY'), base_url='https://generativelanguage.googleapis.com/v1beta/')
