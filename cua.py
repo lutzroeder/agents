@@ -72,7 +72,7 @@ async def main():
     agent = agents.Agent(
         "computer-use",
         "You are a helpful agent. DO NOT ask the user for confirmations.",
-        model="computer-use-preview",
+        model="gpt-5.4",
         model_settings=agents.ModelSettings(truncation="auto",
             reasoning={"generate_summary": "concise"}),
         tools=[agents.ComputerTool(LocalComputer())],

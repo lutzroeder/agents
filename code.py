@@ -198,16 +198,16 @@ def shell(command: list[str], workdir: str) -> str:
 
 async def main():
     argv = list(sys.argv[1:])
-    model = argv.pop(0) if len(argv) > 0 and argv[0] in ('codex', 'claude', 'gemini') else 'claude'
+    model = argv.pop(0) if len(argv) > 0 and argv[0] in ('gpt', 'claude', 'gemini') else 'claude'
     if len(argv) < 1 or not os.path.exists(argv[0]):
-        print("Usage: python code.py [codex|claude|gemini] <directory> [prompt]")
+        print("Usage: python code.py [gpt|claude|gemini] <directory> [prompt]")
         sys.exit(1)
     location = os.path.abspath(argv.pop(0))
     os.chdir(location)
     prompt = argv.pop(0) if len(argv) > 0 else None
     model_settings = agents.ModelSettings(truncation="auto")
-    if model == 'codex':
-        model = 'gpt-5.3-codex'
+    if model == 'gpt':
+        model = 'gpt-5.4'
         model_settings.reasoning = {"effort": "medium"}
         tools = [apply_patch, shell, agents.WebSearchTool()]
     elif model == 'claude':
