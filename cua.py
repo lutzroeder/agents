@@ -12,15 +12,14 @@ class LocalComputer(agents.AsyncComputer):
     def __init__(self):
         screenshot = pyautogui.screenshot()
         self.size = screenshot.size
-
-    @property
-    def environment(self) -> agents.Environment:
-        system = platform.system().lower()
-        return "mac" if system == "darwin" else system
-
-    @property
-    def dimensions(self) -> tuple[int, int]:
-        return self.size
+        self.keymap = {
+            "arrowdown": "down", "arrowleft": "left", "arrowright": "right", "arrowup": "up",
+            "meta": "win", "gui": "win", "cmd": "win"
+        }
+        if platform.system().lower() == "darwin":
+            self.keymap["meta"] = "command"
+            self.keymap["gui"] = "command"
+            self.keymap["cmd"] = "command"
 
     async def screenshot(self) -> str:
         buffer = io.BytesIO()
@@ -52,11 +51,8 @@ class LocalComputer(agents.AsyncComputer):
         pyautogui.moveTo(x, y, duration=0.1)
 
     async def keypress(self, keys: list[str]) -> None:
-        keymap = {
-            "arrowdown": "down", "arrowleft": "left",
-            "arrowright": "right", "arrowup": "up",
-        }
-        keys = [keymap.get(key.lower(), key.lower()) for key in keys]
+        keys = [self.keymap.get(key.lower(), key.lower()) for key in keys]
+        print(keys)
         for key in keys:
             pyautogui.keyDown(key)
         for key in keys:
@@ -72,9 +68,9 @@ async def main():
     agent = agents.Agent(
         "computer-use",
         "You are a helpful agent. DO NOT ask the user for confirmations.",
-        model="computer-use-preview",
+        model="gpt-5.4",
         model_settings=agents.ModelSettings(truncation="auto",
-            reasoning={"generate_summary": "concise"}),
+            reasoning={"effort": "medium", "summary": "detailed"}),
         tools=[agents.ComputerTool(LocalComputer())],
     )
     while True:
@@ -83,9 +79,10 @@ async def main():
         async for event in stream.stream_events():
             if event.type == 'run_item_stream_event':
                 if event.name == 'tool_called':
-                    action_args = vars(event.item.raw_item.action) | {}
-                    action = action_args.pop("type")
-                    print(f"   {action} {action_args}")
+                    for action in event.item.raw_item.actions:
+                        action_args = vars(action) | {}
+                        action = action_args.pop("type")
+                        print(f"   {action} {action_args}")
                 elif event.name == "reasoning_item_created":
                     summary = "".join([_.text for _ in event.item.raw_item.summary])
                     print(f"\n\U0001F916 Action: {summary}")
