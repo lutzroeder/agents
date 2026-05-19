@@ -1,9 +1,9 @@
 # Tiny Agents
 
-Minimal coding, computer-use, and research agents using the OpenAI Agents SDK.
+Minimal coding, computer use, and research agents using the OpenAI Agents SDK.
 
 * [code.py](code.py) - A minimal coding agent in 250 lines of Python code.
-* [cua.py](cua.py) - A minimal computer-use agent in 100 lines of Python code.
+* [cua.py](cua.py) - A minimal computer use agent in 100 lines of Python code.
 * [research.py](research.py) - A minimal research agent in 100 lines of Python code.
 
 ## Get started
@@ -38,9 +38,9 @@ This repository contains a minimalist implementation of OpenAI's GPT-2 language 
 ...
 ```
 
-## Computer-Use Agent
+## Computer Use Agent
 
-A minimal computer-use agent in 100 lines of Python code.
+A minimal computer use agent in 100 lines of Python code.
 
 ```bash
 pip install pyautogui
